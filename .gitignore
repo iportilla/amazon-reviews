@@ -3,3 +3,7 @@ data/
 .ipynb_checkpoints/
 __pycache__/
 .DS_Store
+
+# Course materials
+Prompt_Lab_Lab_5350.pdf
+SP26-5350-chatGPT-v0.4.pdf
