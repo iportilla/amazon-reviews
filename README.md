@@ -2,7 +2,12 @@
 
 This project sorts Amazon product reviews into sentiment and topic classes **without any labeled training data**. It uses OpenAI embeddings and cosine similarity, following the OpenAI Cookbook example [*Zero-shot classification with embeddings*](https://developers.openai.com/cookbook/examples/zero-shot_classification_with_embeddings).
 
-Everything lives in one notebook: [`amazon_reviews_zero_shot_classification.ipynb`](amazon_reviews_zero_shot_classification.ipynb).
+There are two notebooks:
+
+| Notebook | For |
+|---|---|
+| [`intro_to_embeddings_review_classifier.ipynb`](intro_to_embeddings_review_classifier.ipynb) | **Beginners.** Explains embeddings and cosine similarity step by step, then builds a positive/negative classifier (about 95% accuracy). Ends with exercises. |
+| [`amazon_reviews_zero_shot_classification.ipynb`](amazon_reviews_zero_shot_classification.ipynb) | **Full analysis.** Label wording, precision–recall and cut-off tuning, three classes, topics, and a comparison with a trained model. The rest of this README describes this notebook. |
 
 ## How it works
 
@@ -132,7 +137,8 @@ On the first run the dataset is downloaded to `data/`. API calls are only needed
 ```
 .
 ├── README.md
-├── amazon_reviews_zero_shot_classification.ipynb   # main notebook (with saved outputs)
+├── intro_to_embeddings_review_classifier.ipynb     # beginner notebook (with saved outputs)
+├── amazon_reviews_zero_shot_classification.ipynb   # full notebook (with saved outputs)
 ├── env.sample                                      # template for .env
 ├── .env                                            # your OPENAI_API_KEY (keep private)
 └── data/
