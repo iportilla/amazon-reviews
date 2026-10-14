@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amazon Reviews Embeddings Lab</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+body{margin:0;background:#2a2f38;}
+.slide{width:1920px;height:1080px;margin:0 auto 24px;transform-origin:top left;}
+.wrap{overflow:hidden;margin:0 auto 24px;}
+section{width:1920px;height:1080px;box-sizing:border-box;position:relative;overflow:hidden}
+section *{margin:0;box-sizing:border-box}
+section aside{display:none}
+section table{border-collapse:collapse;width:100%}
+section th,section td{padding:0.35em 0.6em;border-bottom:1px solid #DCD8CE;text-align:left}
+x-shape{display:block;flex:none}
+x-shape[kind=arrow-right]{clip-path:polygon(0 30%,60% 30%,60% 0,100% 50%,60% 100%,60% 70%,0 70%)}
+.notes{max-width:1100px;margin:-8px auto 32px;color:#c9d1db;font:16px/1.5 'IBM Plex Sans',Arial,sans-serif;padding:0 16px}
+</style></head><body>
+<div class="wrap"><div class="slide"><section id="cover" data-transition="fade" style="background:#15202E;color:#F6F4EF;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:space-between">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;color:#F0A060;letter-spacing:2px;text-transform:uppercase">Class lab · Embeddings</p>
+<div style="display:flex;flex-direction:column;gap:40px">
+<h1 style="font-size:120px;font-weight:700;line-height:1.05;color:#F6F4EF">Classifying Amazon reviews with embeddings</h1>
+<p style="font-size:44px;color:#BFCAD6;line-height:1.3">Zero-shot sentiment: no labeled training data, just two sentences describing each class.</p>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;color:#BFCAD6">intro_to_embeddings_review_classifier.ipynb</p>
+<aside>Today's lab walks through the beginner notebook in the amazon-reviews repo. By the end, you'll have built a sentiment classifier that gets about 95% accuracy on real Amazon reviews without training anything.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="goals" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:64px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Learning goals</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">Three ideas you'll leave with</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px">
+<div style="display:flex;flex-direction:column;gap:20px;background:#FFFFFC;padding:48px;border:1px solid #DCD8CE;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:72px;font-weight:600;color:#2D5B8C">01</p>
+<h3 style="font-size:44px;font-weight:600;line-height:1.15">Embeddings</h3>
+<p style="font-size:32px;color:#4A5568;line-height:1.4">A list of numbers that captures the <i>meaning</i> of a piece of text.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:20px;background:#FFFFFC;padding:48px;border:1px solid #DCD8CE;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:72px;font-weight:600;color:#2D5B8C">02</p>
+<h3 style="font-size:44px;font-weight:600;line-height:1.15">Similarity</h3>
+<p style="font-size:32px;color:#4A5568;line-height:1.4">Texts with similar meaning get similar numbers. Cosine similarity measures how close.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:20px;background:#FFFFFC;padding:48px;border:1px solid #DCD8CE;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:72px;font-weight:600;color:#2D5B8C">03</p>
+<h3 style="font-size:44px;font-weight:600;line-height:1.15">Zero-shot</h3>
+<p style="font-size:32px;color:#4A5568;line-height:1.4">Label a review by checking which class description it sits closest to.</p>
+</div>
+</div>
+<aside>These three map to the notebook's opening cell. Everything else in the lab builds on them.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="setup" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Step 1 · Setup</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">Get the notebook running</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:48px">
+<div style="display:flex;flex-direction:column;gap:28px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:600">1. Install packages</h3>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#E6E9EF;background:#1E2633;padding:24px;border-radius:12px;line-height:1.5">pip install openai python-dotenv pandas numpy scikit-learn matplotlib jupyter</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:600">2. Add your API key</h3>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#E6E9EF;background:#1E2633;padding:24px;border-radius:12px;line-height:1.5">cp env.sample .env<br># then set OPENAI_API_KEY=...</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<h3 style="font-size:32px;font-weight:600">3. Open the notebook</h3>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#E6E9EF;background:#1E2633;padding:24px;border-radius:12px;line-height:1.5">jupyter notebook intro_to_embeddings_review_classifier.ipynb</p>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:20px;background:#FFFFFC;padding:48px;border:1px solid #DCD8CE;border-radius:16px">
+<h3 style="font-size:32px;font-weight:600">Inside the notebook</h3>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#15202E;line-height:1.6">load_dotenv()<br>client = OpenAI()<br>MODEL = "text-embedding-3-small"</p>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">One model for everything. The reviews were embedded with <b>text-embedding-3-small</b>, so our class descriptions must use the same model, or the vectors can't be compared.</p>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">Cost: a full run costs a fraction of a cent.</p>
+</div>
+</div>
+<aside>Keep the .env file private: it holds your API key and is git-ignored. Only the class descriptions and a handful of test sentences call the API; the 1,000 review embeddings are precomputed.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="embedding" data-section="Embeddings and cosine similarity" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Step 2 · Your first embedding</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">Text in, 1,536 numbers out</h2>
+</div>
+<div style="display:flex;align-items:center;gap:40px">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFC;padding:48px;border:1px solid #DCD8CE;border-radius:16px">
+<p style="font-size:24px;color:#4A5568;text-transform:uppercase;letter-spacing:2px">Input text</p>
+<p style="font-size:44px;font-weight:600;line-height:1.2">"I love this coffee!"</p>
+</div>
+<x-shape kind="arrow-right" style="background:#A84E16;width:120px;height:60px"></x-shape>
+<div style="flex:1.3;display:flex;flex-direction:column;gap:12px;background:#1E2633;padding:48px;border-radius:16px">
+<p style="font-size:24px;color:#BFCAD6;text-transform:uppercase;letter-spacing:2px">Embedding vector</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:32px;color:#E6E9EF;line-height:1.4">[-0.0443, -0.0314, -0.0405, -0.0301, -0.0415, … ]</p>
+<p style="font-size:28px;color:#F0A060">1,536 values</p>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:1.2fr 1fr;gap:48px;align-items:start">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#E6E9EF;background:#1E2633;padding:32px;border-radius:12px;line-height:1.5">def embed(texts):<br>&#160;&#160;&#160;&#160;response = client.embeddings.create(<br>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;model=MODEL, input=texts)<br>&#160;&#160;&#160;&#160;return [np.array(item.embedding)<br>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;for item in response.data]</p>
+<p style="font-size:32px;color:#4A5568;line-height:1.45">Every text, short or long, becomes the same-length vector. The numbers mean nothing alone; what matters is how they <b>compare</b> to other embeddings.</p>
+</div>
+<aside>The helper takes a list so we can embed many texts in one API call. Point out that a one-word input and a paragraph both produce 1,536 numbers.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="similarity" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Step 3 · Measuring similarity</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">Cosine similarity: closer to 1 means closer in meaning</h2>
+</div>
+<div style="display:grid;grid-template-columns:1.6fr 1fr;gap:64px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:28px">
+<p style="font-size:28px;color:#4A5568">Compared with <b style="color:#15202E">"This coffee tastes amazing."</b></p>
+<div style="display:flex;flex-direction:column;gap:8px">
+<p style="font-size:28px">"What a delicious cup of coffee!"</p>
+<div style="display:flex;align-items:center;gap:20px"><div style="width:780px;height:44px;background:#2D5B8C;border-radius:6px"></div><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:32px;font-weight:600">0.65</p></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<p style="font-size:28px">"The coffee was awful and bitter."</p>
+<div style="display:flex;align-items:center;gap:20px"><div style="width:624px;height:44px;background:#2D5B8C;border-radius:6px;opacity:0.7"></div><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:32px;font-weight:600">0.52</p></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<p style="font-size:28px">"My dog loves these treats."</p>
+<div style="display:flex;align-items:center;gap:20px"><div style="width:312px;height:44px;background:#2D5B8C;border-radius:6px;opacity:0.45"></div><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:32px;font-weight:600">0.26</p></div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:28px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#E6E9EF;background:#1E2633;padding:32px;border-radius:12px;line-height:1.5">def similarity(a, b):<br>&#160;&#160;&#160;&#160;return np.dot(a, b) / (<br>&#160;&#160;&#160;&#160;&#160;&#160;np.linalg.norm(a) *<br>&#160;&#160;&#160;&#160;&#160;&#160;np.linalg.norm(b))</p>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFFFC;padding:36px;border:1px solid #DCD8CE;border-radius:16px">
+<h3 style="font-size:32px;font-weight:600">Embeddings capture topic and tone</h3>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">Same topic, same tone scores highest. Same topic, opposite tone is still close. A different topic is far away.</p>
+</div>
+</div>
+</div>
+<aside>From the notebook's 4x4 similarity table. The negative coffee sentence is still fairly close because it's about coffee. That matters later: topic can compete with sentiment.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="cosine" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">How cosine similarity works</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">Cosine similarity is an angle</h2>
+</div>
+<div style="display:grid;grid-template-columns:700px 1fr;gap:64px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="position:relative;width:700px;height:520px;background:#FFFFFC;border:1px solid #DCD8CE;border-radius:16px">
+<svg aria-label="Three vectors from a common origin: a points at 10 degrees, b at about 59 degrees (49 degrees from a, cosine 0.65), c at about 85 degrees (75 degrees from a, cosine 0.26). An arc marks the angle theta between a and b." width="700" height="520" viewBox="0 0 700 520" xmlns="http://www.w3.org/2000/svg" style="position:absolute;left:0px;top:0px;width:700px;height:520px">
+<defs>
+<marker id="mA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#15202E"/></marker>
+<marker id="mB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2D5B8C"/></marker>
+<marker id="mC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#A84E16"/></marker>
+</defs>
+<line x1="70" y1="450" x2="670" y2="450" stroke="#DCD8CE" stroke-width="2"/>
+<line x1="70" y1="450" x2="70" y2="30" stroke="#DCD8CE" stroke-width="2"/>
+<path d="M178.3 430.9 A110 110 0 0 0 125.8 355.2" fill="none" stroke="#2D5B8C" stroke-width="3" stroke-dasharray="6 5"/>
+<line x1="70" y1="450" x2="444" y2="384" stroke="#15202E" stroke-width="5" marker-end="url(#mA)"/>
+<line x1="70" y1="450" x2="263" y2="123" stroke="#2D5B8C" stroke-width="5" marker-end="url(#mB)"/>
+<line x1="70" y1="450" x2="104" y2="71.5" stroke="#A84E16" stroke-width="5" marker-end="url(#mC)"/>
+<circle cx="70" cy="450" r="6" fill="#15202E"/>
+</svg>
+<p style="position:absolute;left:130px;top:16px;width:540px;font-size:24px;line-height:1.3;color:#A84E16"><b>c</b> “My dog loves these treats.”<br>cos = 0.26 (θ ≈ 75°)</p>
+<p style="position:absolute;left:285px;top:110px;width:395px;font-size:24px;line-height:1.3;color:#2D5B8C"><b>b</b> “What a delicious cup of coffee!”<br>cos = 0.65 (θ ≈ 49°)</p>
+<p style="position:absolute;left:290px;top:466px;width:400px;font-size:24px;line-height:1.3;color:#15202E"><b>a</b> “This coffee tastes amazing.”</p>
+<p style="position:absolute;left:182px;top:348px;width:40px;font-family:Georgia, serif;font-size:32px;font-style:italic;color:#2D5B8C">θ</p>
+</div>
+<p style="font-size:24px;color:#4A5568">2-D sketch using the notebook's scores. Real embeddings have 1,536 dimensions, but the angle idea is the same.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;align-items:center;gap:20px;font-family:Georgia, serif;font-size:36px">
+<p style="font-family:Georgia, serif;font-size:36px;white-space:nowrap">cos(<i>θ</i>) =</p>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+<p style="font-family:Georgia, serif;font-size:36px;white-space:nowrap"><b>a</b> · <b>b</b></p>
+<div style="width:150px;height:3px;background:#15202E"></div>
+<p style="font-family:Georgia, serif;font-size:36px;white-space:nowrap">‖<b>a</b>‖ ‖<b>b</b>‖</p>
+</div>
+<p style="font-family:Georgia, serif;font-size:36px">=</p>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+<p style="font-family:Georgia, serif;font-size:36px;white-space:nowrap">∑ <i>aᵢ bᵢ</i></p>
+<div style="width:380px;height:3px;background:#15202E"></div>
+<p style="font-family:Georgia, serif;font-size:36px;white-space:nowrap">√∑ <i>aᵢ</i>² · √∑ <i>bᵢ</i>²</p>
+</div>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#E6E9EF;background:#1E2633;padding:24px;border-radius:12px;line-height:1.5"><span style="color:#9DB8D6">% LaTeX</span><br>\cos\theta = \frac{a \cdot b}{\lVert a \rVert \, \lVert b \rVert}<br>= \frac{\sum_{i=1}^{n} a_i b_i}<br>{\sqrt{\sum_{i=1}^{n} a_i^2} \, \sqrt{\sum_{i=1}^{n} b_i^2}}</p>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;background:#FFFFFC;padding:16px;border:1px solid #DCD8CE;border-radius:12px">
+<svg aria-label="Two arrows pointing almost the same way" width="140" height="80" viewBox="0 0 140 80" xmlns="http://www.w3.org/2000/svg" style="width:140px;height:80px"><line x1="10" y1="70" x2="128" y2="50" stroke="#15202E" stroke-width="4"/><line x1="10" y1="70" x2="122" y2="28" stroke="#2D5B8C" stroke-width="4"/><circle cx="10" cy="70" r="4" fill="#15202E"/></svg>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:26px;font-weight:600">cos ≈ 1</p>
+<p style="font-size:24px;color:#4A5568">same meaning</p>
+</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;background:#FFFFFC;padding:16px;border:1px solid #DCD8CE;border-radius:12px">
+<svg aria-label="Two arrows at a right angle" width="140" height="80" viewBox="0 0 140 80" xmlns="http://www.w3.org/2000/svg" style="width:140px;height:80px"><line x1="30" y1="72" x2="130" y2="72" stroke="#15202E" stroke-width="4"/><line x1="30" y1="72" x2="30" y2="6" stroke="#2D5B8C" stroke-width="4"/><path d="M30 58 L44 58 L44 72" fill="none" stroke="#4A5568" stroke-width="2"/><circle cx="30" cy="72" r="4" fill="#15202E"/></svg>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:26px;font-weight:600">cos = 0</p>
+<p style="font-size:24px;color:#4A5568">unrelated</p>
+</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;background:#FFFFFC;padding:16px;border:1px solid #DCD8CE;border-radius:12px">
+<svg aria-label="Two arrows pointing in opposite directions" width="140" height="80" viewBox="0 0 140 80" xmlns="http://www.w3.org/2000/svg" style="width:140px;height:80px"><line x1="70" y1="40" x2="134" y2="40" stroke="#15202E" stroke-width="4"/><line x1="70" y1="40" x2="6" y2="40" stroke="#2D5B8C" stroke-width="4"/><circle cx="70" cy="40" r="4" fill="#15202E"/></svg>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:26px;font-weight:600">cos = −1</p>
+<p style="font-size:24px;color:#4A5568">opposite</p>
+</div>
+</div>
+<p style="font-size:24px;color:#4A5568;line-height:1.4">OpenAI embeddings have length 1, so ‖<b>a</b>‖ ‖<b>b</b>‖ = 1 and the score is just the dot product.</p>
+</div>
+</div>
+<aside>Cosine similarity ignores how long the vectors are and only measures the angle between them. Numerator: the dot product, multiply matching coordinates and add them up (1,536 terms for our embeddings). Denominator: the two lengths, which normalize the result to the range -1 to 1. The diagram uses the notebook's scores: 0.65 means an angle of about 49 degrees (arccos 0.65), 0.26 about 75 degrees. In practice, text embeddings rarely go negative; unrelated text sits around 0.1 to 0.3, which is why the stale-chips review scored only 0.298 against the negative description and still won. Because OpenAI embeddings are normalized to length 1, np.dot(a, b) gives the same answer as the full formula; the notebook's similarity() divides by the norms anyway so it works for any vectors.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="pca" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:32px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Seeing it in a picture</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">Related words land near each other</h2>
+<p style="font-size:32px;color:#4A5568;line-height:1.45">We can't draw 1,536 dimensions, so <b style="color:#15202E">PCA</b> squashes them to 2 while keeping as much structure as possible.</p>
+<p style="font-size:32px;color:#4A5568;line-height:1.45">Animals, drinks and taste words form their own neighborhoods.</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#4A5568">PCA(n_components=2).fit_transform(embed(words))</p>
+</div>
+<img src="pca_words.png" alt="Scatter plot of ten words placed by meaning: dog, cat, puppy cluster together; coffee, tea, espresso cluster together; delicious, tasty, disgusting, terrible group as taste words" style="width:760px;height:700px;object-fit:contain;background:#FFFFFC;border:1px solid #DCD8CE;border-radius:16px">
+<aside>Plot from the notebook. Ask students: where would "kitten" or "latte" land? Note this is a lossy 2D view; distances aren't exact.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="idea" data-section="Building the zero-shot classifier on real reviews" style="background:#15202E;color:#F6F4EF;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:64px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#F0A060;letter-spacing:2px;text-transform:uppercase">Step 4 · The classification idea</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1;color:#F6F4EF">Zero-shot: the closest description wins</h2>
+</div>
+<div style="display:flex;align-items:stretch;gap:24px">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#22304A;padding:44px;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:44px;font-weight:600;color:#F0A060">1</p>
+<h3 style="font-size:36px;font-weight:600;color:#F6F4EF">Describe each class</h3>
+<p style="font-size:28px;color:#BFCAD6;line-height:1.45">"An Amazon review with a negative sentiment."</p>
+</div>
+<x-shape kind="arrow-right" style="background:#F0A060;width:72px;height:36px;align-self:center"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#22304A;padding:44px;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:44px;font-weight:600;color:#F0A060">2</p>
+<h3 style="font-size:36px;font-weight:600;color:#F6F4EF">Embed them</h3>
+<p style="font-size:28px;color:#BFCAD6;line-height:1.45">Same model as the reviews, so the vectors are comparable.</p>
+</div>
+<x-shape kind="arrow-right" style="background:#F0A060;width:72px;height:36px;align-self:center"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#22304A;padding:44px;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:44px;font-weight:600;color:#F0A060">3</p>
+<h3 style="font-size:36px;font-weight:600;color:#F6F4EF">Pick the closest</h3>
+<p style="font-size:28px;color:#BFCAD6;line-height:1.45">For each review, the most similar description is the prediction.</p>
+</div>
+</div>
+<p style="font-size:32px;color:#BFCAD6;line-height:1.4">"Zero" because we use <span style="color:#F0A060">zero labeled examples</span>. The class is defined only by a sentence.</p>
+<aside>This is the core trick of the lab. No training loop, no labeled data: two sentences define the two classes.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="example" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Try it on one review</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">The bigger score is the prediction</h2>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFFFC;padding:48px;border:1px solid #DCD8CE;border-radius:16px">
+<p style="font-size:24px;color:#4A5568;text-transform:uppercase;letter-spacing:2px">Review</p>
+<p style="font-size:44px;font-weight:600;line-height:1.2">"These chips arrived stale and tasted like cardboard."</p>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBE9DC;padding:44px;border:3px solid #A84E16;border-radius:16px">
+<p style="font-size:28px;color:#4A5568">Similarity to <b style="color:#15202E">negative</b> description</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:120px;font-weight:600;color:#A84E16;line-height:1.1">0.298</p>
+<p style="font-size:28px;font-weight:600;color:#15202E">Higher: predicted negative</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFC;padding:44px;border:1px solid #DCD8CE;border-radius:16px">
+<p style="font-size:28px;color:#4A5568">Similarity to <b style="color:#15202E">positive</b> description</p>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:120px;font-weight:600;color:#4A5568;line-height:1.1">0.165</p>
+<p style="font-size:28px;color:#4A5568">Lower</p>
+</div>
+</div>
+<aside>Similarity values for sentences like these are modest, well below 1. That's fine: we only need to know which one is bigger.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="data" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Step 5 · Load real Amazon reviews</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">1,000 Fine Food reviews, embeddings included</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:28px">
+<p style="font-size:32px;color:#4A5568;line-height:1.45">From the OpenAI Cookbook. Each review has a 1–5 star score, and its embedding was <b style="color:#15202E">already calculated</b> with the same model.</p>
+<p style="font-size:32px;color:#4A5568;line-height:1.45">Stars are the true answer. We use them only to <b style="color:#15202E">check</b> the classifier, never to train it.</p>
+<table style="font-size:32px;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif">
+<tr><th style="width:40%">Stars</th><th style="width:60%">Sentiment</th></tr>
+<tr><td>1–2</td><td>negative</td></tr>
+<tr><td>3</td><td>neutral (skipped for now)</td></tr>
+<tr><td>4–5</td><td>positive</td></tr>
+</table>
+</div>
+<div style="display:flex;flex-direction:column;gap:24px;background:#FFFFFC;padding:48px;border:1px solid #DCD8CE;border-radius:16px">
+<h3 style="font-size:32px;font-weight:600">After dropping 3★ reviews</h3>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between"><p style="font-size:32px">positive</p><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:32px;font-weight:600">789</p></div>
+<div style="width:600px;height:40px;background:#2D5B8C;border-radius:6px"></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between"><p style="font-size:32px">negative</p><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:32px;font-weight:600">136</p></div>
+<div style="width:103px;height:40px;background:#A84E16;border-radius:6px"></div>
+</div>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">Imbalanced: about 85% positive. Keep that in mind when reading accuracy.</p>
+</div>
+</div>
+<aside>The CSV stores embeddings as text like "[0.01, -0.02, ...]", so the notebook converts them back with json.loads. Precomputed embeddings mean loading the data costs nothing.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="classify" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Step 6 · Classify every review</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">The whole classifier fits in a few lines</h2>
+</div>
+<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:56px;align-items:start">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#E6E9EF;background:#1E2633;padding:32px;border-radius:12px;line-height:1.5">labels = {<br>&#160;&#160;"negative": "An Amazon review with<br>&#160;&#160;&#160;&#160;&#160;&#160;a negative sentiment.",<br>&#160;&#160;"positive": "An Amazon review with<br>&#160;&#160;&#160;&#160;&#160;&#160;a positive sentiment.",<br>}<br>label_vectors = embed(list(labels.values()))<br><br>def classify(vector):<br>&#160;&#160;scores = [similarity(vector, lv)<br>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;for lv in label_vectors]<br>&#160;&#160;return list(labels)[np.argmax(scores)]</p>
+<div style="display:flex;flex-direction:column;gap:28px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFFFC;padding:40px;border:1px solid #DCD8CE;border-radius:16px">
+<h3 style="font-size:32px;font-weight:600">Two API calls total</h3>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">Only the two descriptions are embedded. The reviews' vectors are already in the dataset.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFFFC;padding:40px;border:1px solid #DCD8CE;border-radius:16px">
+<h3 style="font-size:32px;font-weight:600">argmax picks the winner</h3>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">Score the review against each description, return the label with the highest similarity.</p>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#4A5568;line-height:1.5">reviews["predicted"] =<br>&#160;&#160;reviews["embedding"].apply(classify)</p>
+</div>
+</div>
+<aside>Walk through classify line by line. Adding a class is just adding a dictionary entry, which is exactly what exercise 2 asks for.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="results" data-section="How well it works and where it fails" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Step 7 · How well did it do?</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">94.9% accuracy from two sentences</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1.25fr;gap:72px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:200px;font-weight:600;color:#2D5B8C;line-height:1">94.9%</p>
+<p style="font-size:32px;color:#4A5568;line-height:1.45">878 of 925 reviews correct, with <b style="color:#15202E">zero training examples</b>.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:grid;grid-template-columns:240px 1fr 1fr;gap:12px">
+<p style="font-size:24px;color:#4A5568"></p>
+<p style="font-size:24px;color:#4A5568;text-align:center">predicted negative</p>
+<p style="font-size:24px;color:#4A5568;text-align:center">predicted positive</p>
+<p style="font-size:28px;font-weight:600;padding:36px 0px">true negative</p>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:#2D5B8C;border-radius:12px;padding:24px"><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:56px;font-weight:600;color:#F6F4EF">131</p><p style="font-size:24px;color:#DCE6F0">correct</p></div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:#FBE9DC;border:2px solid #A84E16;border-radius:12px;padding:24px"><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:56px;font-weight:600;color:#A84E16">5</p><p style="font-size:24px;color:#7A3A10">missed</p></div>
+<p style="font-size:28px;font-weight:600;padding:36px 0px">true positive</p>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:#FBE9DC;border:2px solid #A84E16;border-radius:12px;padding:24px"><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:56px;font-weight:600;color:#A84E16">42</p><p style="font-size:24px;color:#7A3A10">wrongly negative</p></div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:#2D5B8C;border-radius:12px;padding:24px"><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:56px;font-weight:600;color:#F6F4EF">747</p><p style="font-size:24px;color:#DCE6F0">correct</p></div>
+</div>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">The diagonal is right; everything else is a mistake. Most errors are positive reviews read as negative.</p>
+</div>
+</div>
+<aside>Confusion matrix from pd.crosstab. With 85% positives, a model that always says "positive" would score about 85%, so 94.9% is a real gain. The classifier catches 131 of 136 negatives.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="metrics" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Reading the confusion matrix</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">Precision and recall, by example</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1.15fr;gap:72px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-size:24px;color:#4A5568">Focus class: <b style="color:#15202E">positive</b> (the usual convention)</p>
+<div style="display:grid;grid-template-columns:180px 1fr 1fr;gap:12px">
+<p style="font-size:24px"></p>
+<p style="font-size:24px;color:#4A5568;text-align:center">predicted pos</p>
+<p style="font-size:24px;color:#4A5568;text-align:center">predicted neg</p>
+<p style="font-size:26px;font-weight:600;padding:40px 0px">true pos</p>
+<div style="display:flex;flex-direction:column;align-items:center;background:#2D5B8C;border-radius:12px;padding:20px"><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;font-weight:600;color:#F0C9A8">TP</p><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:48px;font-weight:600;color:#F6F4EF">747</p><p style="font-size:24px;color:#DCE6F0">caught</p></div>
+<div style="display:flex;flex-direction:column;align-items:center;background:#FFFFFC;border:2px dashed #A84E16;border-radius:12px;padding:20px"><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;font-weight:600;color:#A84E16">FN</p><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:48px;font-weight:600;color:#15202E">42</p><p style="font-size:24px;color:#4A5568">missed</p></div>
+<p style="font-size:26px;font-weight:600;padding:40px 0px">true neg</p>
+<div style="display:flex;flex-direction:column;align-items:center;background:#FBE9DC;border:2px solid #A84E16;border-radius:12px;padding:20px"><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;font-weight:600;color:#A84E16">FP</p><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:48px;font-weight:600;color:#15202E">5</p><p style="font-size:24px;color:#4A5568">false alarm</p></div>
+<div style="display:flex;flex-direction:column;align-items:center;background:#E4E9EF;border-radius:12px;padding:20px"><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;font-weight:600;color:#4A5568">TN</p><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:48px;font-weight:600;color:#15202E">131</p><p style="font-size:24px;color:#4A5568">correctly rejected</p></div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><h3 style="font-size:36px;font-weight:600">Precision <span style="color:#4A5568">= TP / (TP + FP)</span></h3><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:36px;font-weight:600;color:#2D5B8C">99.3%</p></div>
+<p style="font-size:26px;color:#4A5568;line-height:1.4">Of the 752 reviews we <b style="color:#15202E">called</b> positive, how many really were?</p>
+<div style="display:flex;height:48px"><div style="flex:747;background:#2D5B8C;border-radius:6px 0px 0px 6px;display:flex;align-items:center;padding:0px 16px"><p style="font-size:24px;color:#F6F4EF;font-weight:600">747 right</p></div><div style="flex:5;min-width:24px;background:#FBE9DC;border:2px solid #A84E16;border-radius:0px 6px 6px 0px"></div></div>
+<p style="font-size:24px;color:#4A5568">5 wrong (orange sliver)</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><h3 style="font-size:36px;font-weight:600">Recall <span style="color:#4A5568">= TP / (TP + FN)</span></h3><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:36px;font-weight:600;color:#2D5B8C">94.7%</p></div>
+<p style="font-size:26px;color:#4A5568;line-height:1.4">Of the 789 reviews that <b style="color:#15202E">are</b> positive, how many did we catch?</p>
+<div style="display:flex;height:48px"><div style="flex:747;background:#2D5B8C;border-radius:6px 0px 0px 6px;display:flex;align-items:center;padding:0px 16px"><p style="font-size:24px;color:#F6F4EF;font-weight:600">747 caught</p></div><div style="flex:42;min-width:48px;background:#FFFFFC;border:2px dashed #A84E16;border-radius:0px 6px 6px 0px"></div></div>
+<p style="font-size:24px;color:#4A5568">42 missed (dashed)</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBE9DC;padding:24px 32px;border:2px solid #A84E16;border-radius:16px">
+<p style="font-size:26px;color:#15202E;line-height:1.4"><b>Both look excellent, but flip the focus to negative:</b> precision drops to 76%. Next slide.</p>
+</div>
+</div>
+</div>
+<aside>Positive is the focus class, the usual convention (and scikit-learn's default). Precision reads down the "predicted pos" column: 747 of 752 positive predictions were right. Recall reads across the "true pos" row: 747 of 789 positive reviews were found. Both are high because positives are 85% of the data. Swap the focus to negative and the same matrix gives TP 131, FP 42, FN 5: precision 131/173 = 75.7%, recall 131/136 = 96.3%. About 1 in 4 "negative" flags is actually a happy review. The next slide shows both classes side by side.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="f1" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">F1 score</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">F1 balances precision and recall</h2>
+</div>
+<div style="display:grid;grid-template-columns:1.1fr 1fr;gap:72px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;gap:28px">
+<div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;background:#2D5B8C;border-radius:4px"></div><p style="font-size:24px">Precision</p></div>
+<div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;background:#A84E16;border-radius:4px"></div><p style="font-size:24px">Recall</p></div>
+<div style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;background:#9DB8D6;border-radius:4px"></div><p style="font-size:24px">F1</p></div>
+</div>
+<div style="display:flex;gap:64px;align-items:end;height:460px;border-bottom:2px solid #15202E;padding:0px 24px">
+<div style="display:flex;gap:12px;align-items:end">
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px">.76</p><div style="width:80px;height:303px;background:#2D5B8C;border-radius:6px 6px 0px 0px"></div></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px">.96</p><div style="width:80px;height:385px;background:#A84E16;border-radius:6px 6px 0px 0px"></div></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:600">.85</p><div style="width:80px;height:339px;background:#9DB8D6;border-radius:6px 6px 0px 0px"></div></div>
+</div>
+<div style="display:flex;gap:12px;align-items:end">
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px">.99</p><div style="width:80px;height:397px;background:#2D5B8C;border-radius:6px 6px 0px 0px"></div></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px">.95</p><div style="width:80px;height:379px;background:#A84E16;border-radius:6px 6px 0px 0px"></div></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:600">.97</p><div style="width:80px;height:388px;background:#9DB8D6;border-radius:6px 6px 0px 0px"></div></div>
+</div>
+</div>
+<div style="display:flex;gap:64px;padding:0px 24px">
+<p style="width:264px;font-size:28px;font-weight:600;text-align:center">negative (136)</p>
+<p style="width:264px;font-size:28px;font-weight:600;text-align:center">positive (789)</p>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:24px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;color:#E6E9EF;background:#1E2633;padding:28px;border-radius:12px;line-height:1.5">F1 = 2 × P × R / (P + R)<br>neg: 2 × .757 × .963 / 1.720 = <span style="color:#F0A060">.848</span></p>
+<p style="font-size:26px;color:#4A5568;line-height:1.4">A harmonic mean punishes imbalance: P = 1.0 and R = 0.1 average to 0.55, but F1 is only <b style="color:#15202E">0.18</b>.</p>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFC;padding:28px 32px;border:1px solid #DCD8CE;border-radius:16px">
+<h3 style="font-size:28px;font-weight:600">Macro-F1 = average over classes</h3>
+<p style="font-size:26px;color:#4A5568;line-height:1.4">(.848 + .970) / 2 = <b style="color:#15202E">0.909</b>, the README's number.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FBE9DC;padding:28px 32px;border:2px solid #A84E16;border-radius:16px">
+<h3 style="font-size:28px;font-weight:600">Why not just accuracy?</h3>
+<p style="font-size:26px;color:#4A5568;line-height:1.4">Always guessing "positive" scores 85% accuracy, yet catches zero complaints: macro-F1 only 0.46.</p>
+</div>
+</div>
+</div>
+<aside>Per-class metrics from the same confusion matrix. Positive class: precision 747/752 = 0.993, recall 747/789 = 0.947, F1 = 0.970. Negative: precision 0.757, recall 0.963, F1 = 0.848. Macro-F1 = 0.909 matches the "Sentence descriptions" row in the results table. The "always positive" baseline: accuracy 789/925 = 85.3%, negative F1 = 0, positive F1 = 0.921, so macro-F1 = 0.46. That's why the README reports macro-F1 alongside accuracy on imbalanced data.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="mistakes" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Looking at the mistakes</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">Why the classifier gets reviews wrong</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px">
+<div style="display:flex;flex-direction:column;gap:20px;background:#FFFFFC;padding:44px;border:1px solid #DCD8CE;border-radius:16px">
+<h3 style="font-size:36px;font-weight:600;line-height:1.2">Mixed feelings</h3>
+<p style="font-size:28px;color:#15202E;line-height:1.4;border-left:4px solid #A84E16;padding:0px 0px 0px 20px">"Good, but not Wolfgang Puck good"</p>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">4★, true positive. Reads like a complaint, predicted negative.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:20px;background:#FFFFFC;padding:44px;border:1px solid #DCD8CE;border-radius:16px">
+<h3 style="font-size:36px;font-weight:600;line-height:1.2">Negative words used positively</h3>
+<p style="font-size:28px;color:#15202E;line-height:1.4;border-left:4px solid #A84E16;padding:0px 0px 0px 20px">"Great coffee, not bitter."</p>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">5★, true positive. "Bitter" pulls it toward negative.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:20px;background:#FFFFFC;padding:44px;border:1px solid #DCD8CE;border-radius:16px">
+<h3 style="font-size:36px;font-weight:600;line-height:1.2">Small complaints in happy reviews</h3>
+<p style="font-size:28px;color:#15202E;line-height:1.4;border-left:4px solid #A84E16;padding:0px 0px 0px 20px">"yummy cookies!"</p>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">4★, true positive. Mentions one bad package, predicted negative.</p>
+</div>
+</div>
+<p style="font-size:32px;color:#4A5568">These are hard for people too.</p>
+<aside>All three examples come from the notebook's printed mistakes. There's also the reverse: a 1-star "Cute" review that sounds friendly but complains about price, predicted positive.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="tryit" data-section="Going further, exercises and recap" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Step 8 · Try it yourself</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">Classify any new text</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1.3fr;gap:56px;align-items:start">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;color:#E6E9EF;background:#1E2633;padding:40px;border-radius:12px;line-height:1.55">def classify_text(text):<br>&#160;&#160;&#160;&#160;return classify(<br>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;embed([text])[0])</p>
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;align-items:center;gap:24px;background:#FFFFFC;padding:28px 36px;border:1px solid #DCD8CE;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:600;color:#F6F4EF;background:#2D5B8C;padding:8px 16px;border-radius:8px;white-space:nowrap">positive</p>
+<p style="font-size:28px;line-height:1.35">"Best snack I've bought all year, my kids love it."</p>
+</div>
+<div style="display:flex;align-items:center;gap:24px;background:#FFFFFC;padding:28px 36px;border:1px solid #DCD8CE;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:600;color:#F6F4EF;background:#A84E16;padding:8px 16px;border-radius:8px;white-space:nowrap">negative</p>
+<p style="font-size:28px;line-height:1.35">"The package was crushed and half the cookies were broken."</p>
+</div>
+<div style="display:flex;align-items:center;gap:24px;background:#FFFFFC;padding:28px 36px;border:1px solid #DCD8CE;border-radius:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;font-weight:600;color:#F6F4EF;background:#A84E16;padding:8px 16px;border-radius:8px;white-space:nowrap">negative</p>
+<p style="font-size:28px;line-height:1.35">"Way too sweet, I couldn't finish it."</p>
+</div>
+<div style="display:flex;align-items:center;gap:24px;padding:28px 36px;border:2px dashed #A84E16;border-radius:16px">
+<p style="font-size:28px;color:#4A5568">Add your own review to <b style="color:#15202E">my_reviews</b> and rerun.</p>
+</div>
+</div>
+</div>
+<aside>Have students write a tricky review (sarcasm, mixed feelings) and see whether it fools the classifier. Each new text is one API call.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="further" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Going further · the full notebook</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">Wording, cut-offs and labels all move the score</h2>
+</div>
+<table style="font-size:28px;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif">
+<tr><th style="width:34%">Task</th><th style="width:40%">Method</th><th style="width:13%;text-align:right">Accuracy</th><th style="width:13%;text-align:right">Macro-F1</th></tr>
+<tr><td>Positive vs. negative</td><td>Bare label words</td><td style="text-align:right">0.874</td><td style="text-align:right">0.801</td></tr>
+<tr style="background:#FBE9DC"><td>Positive vs. negative</td><td>Sentence descriptions (this lab)</td><td style="text-align:right">0.949</td><td style="text-align:right">0.909</td></tr>
+<tr><td>Positive vs. negative</td><td>Descriptions + adjusted cut-off*</td><td style="text-align:right">0.969</td><td style="text-align:right">0.932</td></tr>
+<tr><td>Neg / neutral / pos</td><td>Sentence descriptions</td><td style="text-align:right">0.670</td><td style="text-align:right">0.607</td></tr>
+<tr><td>Positive vs. negative</td><td>Logistic regression (trained)†</td><td style="text-align:right">0.973</td><td style="text-align:right">0.950</td></tr>
+<tr><td>Neg / neutral / pos</td><td>Logistic regression (trained)†</td><td style="text-align:right">0.885</td><td style="text-align:right">0.749</td></tr>
+</table>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">Full sentences beat bare words by about 7.5 points. Neutral is the weak spot. With labels, a trained model wins, especially for three classes.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#4A5568">* Cut-off picked on the same reviews it was scored on, so somewhat optimistic. † Scored on a 20% held-out split. Source: amazon_reviews_zero_shot_classification.ipynb</p>
+<aside>These numbers come from the README and the full-analysis notebook. The highlighted row is what students just built. Zero-shot is best for getting started fast, new categories, or when no labeled data exists.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="topics" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Same trick, new classes · topics</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">Packaging and shipping is the pain point</h2>
+</div>
+<div style="display:grid;grid-template-columns:1.8fr 1fr;gap:72px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;align-items:center;gap:20px"><p style="width:320px;font-size:28px;font-weight:600">Packaging &amp; shipping</p><div style="width:312px;height:48px;background:#A84E16;border-radius:6px"></div><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px;font-weight:600;color:#A84E16">2.84★</p></div>
+<div style="display:flex;align-items:center;gap:20px"><p style="width:320px;font-size:28px">Price &amp; value</p><div style="width:447px;height:48px;background:#2D5B8C;border-radius:6px"></div><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px">4.06★</p></div>
+<div style="display:flex;align-items:center;gap:20px"><p style="width:320px;font-size:28px">Taste &amp; flavor</p><div style="width:474px;height:48px;background:#2D5B8C;border-radius:6px"></div><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px">4.31★</p></div>
+<div style="display:flex;align-items:center;gap:20px"><p style="width:320px;font-size:28px">Coffee &amp; tea</p><div style="width:476px;height:48px;background:#2D5B8C;border-radius:6px"></div><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px">4.33★</p></div>
+<div style="display:flex;align-items:center;gap:20px"><p style="width:320px;font-size:28px">Pet food</p><div style="width:479px;height:48px;background:#2D5B8C;border-radius:6px"></div><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px">4.35★</p></div>
+<div style="display:flex;align-items:center;gap:20px"><p style="width:320px;font-size:28px">Health &amp; nutrition</p><div style="width:485px;height:48px;background:#2D5B8C;border-radius:6px"></div><p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:28px">4.41★</p></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:24px">
+<p style="font-size:32px;color:#4A5568;line-height:1.45">Swap the descriptions for topics, like <b style="color:#15202E">"An Amazon review about coffee or tea."</b>, and the same code sorts reviews by subject.</p>
+<p style="font-size:32px;color:#4A5568;line-height:1.45">Sentiment says <i>how</i> customers feel; topics explain <i>why</i>.</p>
+<p style="font-size:24px;color:#4A5568">Mean star rating by predicted topic. Topics have no ground truth, so this is exploratory.</p>
+</div>
+</div>
+<aside>From section 6 of the full notebook. Packaging and shipping averages 2.8 stars against 4.1 to 4.4 for every other topic. This previews exercise 3.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="exercises" style="background:#F6F4EF;color:#15202E;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#A84E16;letter-spacing:2px;text-transform:uppercase">Exercises</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1">Four experiments to run on your own</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFFFC;padding:40px;border:1px solid #DCD8CE;border-radius:16px">
+<h3 style="font-size:36px;font-weight:600"><span style="color:#2D5B8C">1</span>  Change the wording</h3>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">Use just "positive" and "negative" as descriptions and rerun Steps 4–7. Up or down? Why might a full sentence work better?</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFFFC;padding:40px;border:1px solid #DCD8CE;border-radius:16px">
+<h3 style="font-size:36px;font-weight:600"><span style="color:#2D5B8C">2</span>  Add a third class</h3>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">Keep the 3★ reviews, add a "neutral" description, and label 3★ as neutral. How does accuracy change?</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFFFC;padding:40px;border:1px solid #DCD8CE;border-radius:16px">
+<h3 style="font-size:36px;font-weight:600"><span style="color:#2D5B8C">3</span>  Classify by topic</h3>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">Write descriptions like "An Amazon review about pet food." Which reviews land in each topic?</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFFFC;padding:40px;border:1px solid #DCD8CE;border-radius:16px">
+<h3 style="font-size:36px;font-weight:600"><span style="color:#2D5B8C">4</span>  Explore similarity</h3>
+<p style="font-size:28px;color:#4A5568;line-height:1.45">Add sentences to the Step 3 table. Find two with different words but very high similarity.</p>
+</div>
+</div>
+<aside>The full notebook has reference answers: exercise 1 drops to about 87% accuracy; exercise 2 lands around 67%, with neutral as the weak spot.</aside>
+</section>
+</div></div><div class="wrap"><div class="slide"><section id="recap" data-transition="fade" style="background:#15202E;color:#F6F4EF;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;gap:64px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;color:#F0A060;letter-spacing:2px;text-transform:uppercase">Recap</p>
+<h2 style="font-size:72px;font-weight:600;line-height:1.1;color:#F6F4EF">What to remember</h2>
+</div>
+<div style="display:flex;flex-direction:column;gap:0px">
+<div style="display:grid;grid-template-columns:420px 1fr;gap:48px;padding:36px 0px;border-top:1px solid #3A4A63">
+<h3 style="font-size:44px;font-weight:600;color:#F0A060">Embedding</h3>
+<p style="font-size:32px;color:#BFCAD6;line-height:1.45">Turns text into a list of numbers that represents its meaning.</p>
+</div>
+<div style="display:grid;grid-template-columns:420px 1fr;gap:48px;padding:36px 0px;border-top:1px solid #3A4A63">
+<h3 style="font-size:44px;font-weight:600;color:#F0A060">Cosine similarity</h3>
+<p style="font-size:32px;color:#BFCAD6;line-height:1.45">Tells us how close two meanings are.</p>
+</div>
+<div style="display:grid;grid-template-columns:420px 1fr;gap:48px;padding:36px 0px;border-top:1px solid #3A4A63">
+<h3 style="font-size:44px;font-weight:600;color:#F0A060">Zero-shot</h3>
+<p style="font-size:32px;color:#BFCAD6;line-height:1.45">Compare each text with a description of each class and pick the closest. No labeled training data needed.</p>
+</div>
+<div style="display:grid;grid-template-columns:420px 1fr;gap:48px;padding:36px 0px;border-top:1px solid #3A4A63;border-bottom:1px solid #3A4A63">
+<h3 style="font-size:44px;font-weight:600;color:#F0A060">Next</h3>
+<p style="font-size:32px;color:#BFCAD6;line-height:1.45">amazon_reviews_zero_shot_classification.ipynb: precision–recall, three classes, topics, and a trained baseline.</p>
+</div>
+</div>
+<aside>Close by pointing to the full-analysis notebook and the repo at github.com/iportilla/amazon-reviews. Based on the OpenAI Cookbook example "Zero-shot classification with embeddings".</aside>
+</section>
+</div></div>
+<script>
+function fit(){var w=Math.min(window.innerWidth-32,1920),k=w/1920;
+document.querySelectorAll('.wrap').forEach(function(d){d.style.width=w+'px';d.style.height=(1080*k)+'px';d.firstChild.style.transform='scale('+k+')';});}
+document.querySelectorAll('section aside').forEach(function(a){var n=document.createElement('p');n.className='notes';n.textContent='Notes: '+a.textContent;a.closest('.wrap').after(n);});
+window.addEventListener('resize',fit);fit();
+</script></body></html>

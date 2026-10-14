@@ -9,6 +9,10 @@ There are two notebooks:
 | [`intro_to_embeddings_review_classifier.ipynb`](intro_to_embeddings_review_classifier.ipynb) | **Beginners.** Explains embeddings and cosine similarity step by step, then builds a positive/negative classifier (about 95% accuracy). Ends with exercises. |
 | [`amazon_reviews_zero_shot_classification.ipynb`](amazon_reviews_zero_shot_classification.ipynb) | **Full analysis.** Label wording, precision–recall and cut-off tuning, three classes, topics, and a comparison with a trained model. The rest of this README describes this notebook. |
 
+### Slides
+
+[`slides/amazon_reviews_lab_slides.html`](slides/amazon_reviews_lab_slides.html) is a 20-slide deck for teaching the beginner notebook: embeddings, cosine similarity (with the formula), the zero-shot classifier, the confusion matrix, precision, recall and F1, and the exercises. Open it in a browser; speaker notes appear under each slide.
+
 ## How it works
 
 Each class is defined only by a short sentence, such as *"An Amazon review with a negative sentiment."* The notebook embeds every review and every class description with the same model. Each review is then assigned to the class whose description is most similar.
